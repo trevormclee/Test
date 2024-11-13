@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Form to Print</title>
+  <title>Discovery Form - HealthMarkets</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -61,7 +61,8 @@
     }
 
     .form-group input,
-    .form-group textarea {
+    .form-group textarea,
+    .form-group select {
       width: 100%;
       padding: 10px;
       font-size: 16px;
@@ -122,7 +123,7 @@
       z-index: 10;
       position: absolute;
       width: calc(100% - 20px);
-      display: none; /* Hide suggestions list initially */
+      display: none;
     }
 
     .suggestions li {
@@ -168,7 +169,6 @@
       cursor: pointer;
     }
 
-    /* Print-Specific Styles */
     @media print {
       body, html {
         margin: 0;
@@ -207,7 +207,7 @@
   </div>
   <div class="form-group">
     <label for="lastName">Last Name:</label>
-    <input type="text" id="lastName" placeholder="Enter Last Name">
+    <input type="text" id="lastName" placeholder="Enter Last Name" oninput="setFamilyLastName()">
   </div>
   <div class="form-group">
     <label for="address">Address:</label>
@@ -227,7 +227,7 @@
   </div>
   <div class="form-group">
     <label for="income">Estimated Annual Household Income:</label>
-    <input type="number" id="income" placeholder="Enter Income">
+    <input type="text" id="income" placeholder="Enter Income" onblur="formatIncome()">
   </div>
   <div class="form-group">
     <label for="heightFeet">Height:</label>
@@ -241,8 +241,19 @@
     <input type="number" id="weight" placeholder="Enter Weight">
   </div>
   <div class="form-group">
+    <label for="tobacco">Tobacco Use:</label>
+    <select id="tobacco">
+      <option value="no">No</option>
+      <option value="yes">Yes</option>
+    </select>
+  </div>
+  <div class="form-group">
     <label for="doctors">Doctors (How often? Importance?):</label>
     <textarea id="doctors" rows="3" placeholder="Enter doctor details"></textarea>
+  </div>
+  <div class="form-group">
+    <label for="notes">Notes:</label>
+    <textarea id="notes" rows="3" placeholder="Enter any additional notes"></textarea>
   </div>
 
   <!-- Medications Section -->
@@ -263,13 +274,23 @@
 </div>
 
 <div class="buttons">
-  <button class="print-button" onclick="window.print()">Print Form</button>
+  <button class="print-button" onclick="printForm()">Print Form</button>
   <button class="copy-button" onclick="copyForm()">Copy Form</button>
   <button class="clear-button" onclick="clearForm()">Clear Form</button>
 </div>
 
 <script>
-  // Attach the medication event listener to the input fields
+  function printForm() {
+    const firstName = document.getElementById("firstName").value;
+    const lastName = document.getElementById("lastName").value;
+
+    if (firstName && lastName) {
+      const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase() + " " + lastName.charAt(0).toUpperCase() + ".";
+      document.title = formattedName;
+    }
+    window.print();
+  }
+
   function attachMedicationFunctionality(inputElement) {
     const suggestionsElement = inputElement.nextElementSibling;
     const selectedMedicationsElement = inputElement.parentElement.querySelector('.selected-medications');
@@ -289,7 +310,6 @@
                 const brandName = item.openfda.brand_name ? item.openfda.brand_name[0] : '';
                 let strengths = new Set();
 
-                // Attempt to get strengths from `active_ingredient` if available
                 if (item.openfda.active_ingredient) {
                   item.openfda.active_ingredient.forEach(ingredient => {
                     const strengthMatches = ingredient.match(/\d*\.?\d+\s*(mg|mcg|g|ml)/gi);
@@ -299,7 +319,6 @@
                   });
                 }
 
-                // Fallback to `dosage_and_administration` if no strength found in `active_ingredient`
                 if (item.dosage_and_administration) {
                   item.dosage_and_administration.forEach(dosage => {
                     const dosageMatches = dosage.match(/\d*\.?\d+\s*(mg|mcg|g|ml)/gi);
@@ -309,7 +328,6 @@
                   });
                 }
 
-                // Create unique suggestions for each brand and strength combination
                 strengths.forEach(strength => {
                   if (brandName && strength) {
                     const suggestionText = `${brandName} ${strength}`;
@@ -347,21 +365,36 @@
     });
   }
 
+  function attachMedicationEventListeners() {
+    document.querySelectorAll('.medication-input').forEach(input => {
+      attachMedicationFunctionality(input);
+    });
+  }
+
+  attachMedicationEventListeners();
+
   function generateFamilyFields() {
     const familyCount = document.getElementById("familyCount").value;
     const familyFields = document.getElementById("familyFields");
-    const applicantLastName = document.getElementById("lastName").value;
     familyFields.innerHTML = ""; // Clear previous fields
 
     for (let i = 1; i <= familyCount; i++) {
       familyFields.innerHTML += `
+        <div class="section-title">Family Member ${i}</div>
         <div class="form-group family-member">
-          <label>Family Member ${i} - First Name:</label>
+          <label>First Name:</label>
           <input type="text" id="familyFirstName${i}" placeholder="Enter First Name">
         </div>
         <div class="form-group">
           <label>Last Name:</label>
-          <input type="text" id="familyLastName${i}" placeholder="Enter Last Name" value="${applicantLastName}">
+          <input type="text" id="familyLastName${i}" placeholder="Enter Last Name" class="family-last-name">
+        </div>
+        <div class="form-group">
+          <label>Gender:</label>
+          <select id="familyGender${i}">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Date of Birth:</label>
@@ -383,8 +416,19 @@
           <input type="number" id="familyWeight${i}" placeholder="Weight">
         </div>
         <div class="form-group">
+          <label>Tobacco Use:</label>
+          <select id="familyTobacco${i}">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Doctors:</label>
           <textarea id="familyDoctors${i}" rows="3" placeholder="Enter doctor details"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Notes:</label>
+          <textarea id="familyNotes${i}" rows="3" placeholder="Enter any additional notes"></textarea>
         </div>
         <div class="form-group">
           <label>Medications:</label>
@@ -395,12 +439,7 @@
     }
 
     attachMedicationEventListeners();
-  }
-
-  function attachMedicationEventListeners() {
-    document.querySelectorAll('.medication-input').forEach(input => {
-      attachMedicationFunctionality(input);
-    });
+    setFamilyLastName(); // Set last name for all family members when generating fields
   }
 
   function clearForm() {
@@ -412,50 +451,76 @@
     let copiedText = '';
 
     // Applicant Section
-    copiedText += 'APPLICANT\n';
-    copiedText += `First Name: ${document.getElementById('firstName').value}\n`;
-    copiedText += `Last Name: ${document.getElementById('lastName').value}\n`;
-    copiedText += `Address: ${document.getElementById('address').value}\n`;
-    copiedText += `Email: ${document.getElementById('email').value}\n`;
-    copiedText += `Phone: ${document.getElementById('phone').value}\n`;
-    copiedText += `DOB: ${document.getElementById('dob').value}\n`;
-    copiedText += `Estimated Annual Household Income: ${document.getElementById('income').value}\n`;
-    copiedText += `Height: ${document.getElementById('heightFeet').value} ft ${document.getElementById('heightInches').value} in\n`;
-    copiedText += `Weight: ${document.getElementById('weight').value} lbs\n`;
-    copiedText += `Doctors: ${document.getElementById('doctors').value}\n`;
-    copiedText += `Medications:\n`;
+    copiedText += '<b>APPLICANT</b><br><br>';
+    copiedText += `<b>First Name:</b> ${document.getElementById('firstName').value} <br><br>`;
+    copiedText += `<b>Last Name:</b> ${document.getElementById('lastName').value} <br><br>`;
+    copiedText += `<b>Address:</b> ${document.getElementById('address').value} <br><br>`;
+    copiedText += `<b>Email:</b> ${document.getElementById('email').value} <br><br>`;
+    copiedText += `<b>Phone:</b> ${document.getElementById('phone').value} <br><br>`;
+    copiedText += `<b>DOB:</b> ${document.getElementById('dob').value} <br><br>`;
+    copiedText += `<b>Estimated Annual Household Income:</b> ${document.getElementById('income').value} <br><br>`;
+    copiedText += `<b>Height:</b> ${document.getElementById('heightFeet').value} ft ${document.getElementById('heightInches').value} in <br><br>`;
+    copiedText += `<b>Weight:</b> ${document.getElementById('weight').value} lbs <br><br>`;
+    copiedText += `<b>Tobacco Use:</b> ${document.getElementById('tobacco').value} <br><br>`;
+    copiedText += `<b>Doctors:</b> ${document.getElementById('doctors').value} <br><br>`;
+    copiedText += `<b>Notes:</b> ${document.getElementById('notes').value} <br><br>`;
+    copiedText += `<b>Medications:</b><br><br>`;
     document.querySelectorAll('#selected-medications div').forEach(div => {
-      copiedText += `  - ${div.textContent.replace('X', '').trim()}\n`;
+      copiedText += `  - ${div.textContent.replace('X', '').trim()} <br><br>`;
     });
 
     // Family Section
-    copiedText += '\nFAMILY\n';
+    copiedText += '<br><b>FAMILY</b><br><br>';
     const familyCount = document.getElementById('familyCount').value;
     for (let i = 1; i <= familyCount; i++) {
-      copiedText += `\nFamily Member ${i}\n`;
-      copiedText += `First Name: ${document.getElementById(`familyFirstName${i}`).value}\n`;
-      copiedText += `Last Name: ${document.getElementById(`familyLastName${i}`).value}\n`;
-      copiedText += `Date of Birth: ${document.getElementById(`familyDOB${i}`).value}\n`;
-      copiedText += `Relation: ${document.getElementById(`familyRelation${i}`).value}\n`;
-      copiedText += `Height: ${document.getElementById(`familyHeightFeet${i}`).value} ft ${document.getElementById(`familyHeightInches${i}`).value} in\n`;
-      copiedText += `Weight: ${document.getElementById(`familyWeight${i}`).value} lbs\n`;
-      copiedText += `Doctors: ${document.getElementById(`familyDoctors${i}`).value}\n`;
-      copiedText += `Medications:\n`;
+      copiedText += `<br><b>Family Member ${i}</b><br><br>`;
+      copiedText += `<b>First Name:</b> ${document.getElementById(`familyFirstName${i}`).value} <br><br>`;
+      copiedText += `<b>Last Name:</b> ${document.getElementById(`familyLastName${i}`).value} <br><br>`;
+      copiedText += `<b>Gender:</b> ${document.getElementById(`familyGender${i}`).value} <br><br>`;
+      copiedText += `<b>Date of Birth:</b> ${document.getElementById(`familyDOB${i}`).value} <br><br>`;
+      copiedText += `<b>Relation:</b> ${document.getElementById(`familyRelation${i}`).value} <br><br>`;
+      copiedText += `<b>Height:</b> ${document.getElementById(`familyHeightFeet${i}`).value} ft ${document.getElementById(`familyHeightInches${i}`).value} in <br><br>`;
+      copiedText += `<b>Weight:</b> ${document.getElementById(`familyWeight${i}`).value} lbs <br><br>`;
+      copiedText += `<b>Tobacco Use:</b> ${document.getElementById(`familyTobacco${i}`).value} <br><br>`;
+      copiedText += `<b>Doctors:</b> ${document.getElementById(`familyDoctors${i}`).value} <br><br>`;
+      copiedText += `<b>Notes:</b> ${document.getElementById(`familyNotes${i}`).value} <br><br>`;
+      copiedText += `<b>Medications:</b><br><br>`;
       document.querySelectorAll(`#familySelectedMedications${i} div`).forEach(div => {
-        copiedText += `  - ${div.textContent.replace('X', '').trim()}\n`;
+        copiedText += `  - ${div.textContent.replace('X', '').trim()} <br><br>`;
       });
     }
 
     // Copy to clipboard
-    navigator.clipboard.writeText(copiedText).then(() => {
-      alert('Form copied to clipboard!');
-    }, () => {
-      alert('Failed to copy form to clipboard.');
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = copiedText;
+    document.body.appendChild(tempDiv);
+    const range = document.createRange();
+    range.selectNode(tempDiv);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    document.body.removeChild(tempDiv);
+
+    alert('Form copied to clipboard!');
+  }
+
+  function setFamilyLastName() {
+    const lastName = document.getElementById("lastName").value;
+    document.querySelectorAll('.family-last-name').forEach(input => {
+      if (!input.value) { // Only set last name if field is empty
+        input.value = lastName;
+      }
     });
   }
 
-  // Attach the initial medication event listeners
-  attachMedicationEventListeners();
+  function formatIncome() {
+    const incomeInput = document.getElementById("income");
+    let value = incomeInput.value;
+    if (value) {
+      value = parseFloat(value.replace(/[^0-9.-]+/g, "")) || 0;
+      incomeInput.value = value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    }
+  }
 </script>
 
 </body>
